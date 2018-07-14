@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 '''
-VERSION = '0.2.6'
-ProcFinder checks various locations for
-signs of malware running
+ProcFinder.py parses the procfs in Linux
+distributions searching for signs of malware
 '''
 
 import os
 import re
 import subprocess
 
+RED   = '\033[1;91m'
 GREEN = '\033[1;32m'
-RED = '\033[1;91m'
+BLUE  = '\033[0;94m'
 WHITE = '\033[0m'
-BLUE = '\033[0;94m'
+
+__version__ = '0.2.7'
 
 
 class ProcFinder():
@@ -30,10 +31,9 @@ class ProcFinder():
 
 
     def deleted_bin(self):
-        ''' 
-        Loops through every running process trying
-        to files that have been deleted and
-        returns a list of pids
+        '''
+        Returns a list of PIDs whose binary has
+        been deleted from disk
         '''
 
         deleted_binaries = []
@@ -42,16 +42,15 @@ class ProcFinder():
                 link = os.readlink('/proc/{}/exe'.format(pid))
                 if re.match('.*\(deleted\)$', link):
                     deleted_binaries.append(pid)
-            except IOError:    # proc has already terminated
+            except OSError:    # proc has already terminated
                 continue
         return deleted_binaries
 
 
     def path(self):
         '''
-        Loops through every running process trying to
-        find suspicious PATH environment variables and
-        returns a list of pids 
+        Returns a list of PIDs whose PATH environment
+        varibale contains a '.'
         '''
 
         path_binaries = []
@@ -65,14 +64,14 @@ class ProcFinder():
                     for j in lines:
                         if re.match('^PATH=.*\..*', j):
                             path_binaries.append(pid)
-            except IOError:    # proc has already terminated
+            except OSError:    # proc has already terminated
                 continue
         return path_binaries
 
 
     def promiscuous(self):
         '''
-        Finds processes that are listening
+        Returns a list of PIDs who are listening
         on an interface promiscuously
         '''
 
@@ -83,7 +82,10 @@ class ProcFinder():
             for i in packet_read[1::]:
                 inode_list.append(i.split()[-1])
         for pid in self.pids:
-            fd_files = [fd for fd in os.listdir('/proc/{}/fd'.format(pid))]
+            try:
+                fd_files = [fd for fd in os.listdir('/proc/{}/fd'.format(pid))]
+            except OSError:    # proc has already terminated
+                continue
             for link in fd_files:
                 try:
                     fd_link = os.readlink('/proc/{}/fd/{}'.format(pid, link))
@@ -92,16 +94,15 @@ class ProcFinder():
                         if len(i) > 0:
                             if pid not in promiscuous_list:
                                 promiscuous_list.append(pid)
-                except:
+                except OSError:    # proc has already terminated
                     continue
         return promiscuous_list
 
 
     def ps_check(self):
         '''
-        Returns a list of unique pids by
-        comparring the pid list from the on
-        disk ps to the pids found in /proc
+        Returns a list of PIDs whose PID do not match
+        with the on disk ps and the PIDs in /proc
         '''
 
         ps = subprocess.Popen(['ps', '-eo', 'pid', '--no-headers'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -113,32 +114,38 @@ class ProcFinder():
 
     def thread_check(self):
         '''
-        Returns a list of pids where the process
-        has multiple threads and a difference
-        greater than 500 of the smallest  and largest
-        thread ID. Has a high chance of false positives,
+        Returns a list of PIDs whose process has
+        multiple threads and a difference greater
+        than 500 of the smallest and largest thread
+        ID. This has a high chance of false positives,
         recommend running multiple times
         '''
 
         thread_list = []
         for pid in self.pids:
-            thread_dirs = [thread for thread in os.listdir('/proc/{}/task'.format(pid))]
-            if (int(thread_dirs[-1]) - int(thread_dirs[0])) > 500:
-                thread_list.append(pid)
+            try:
+                thread_dirs = [thread for thread in os.listdir('/proc/{}/task'.format(pid))]
+                if (int(thread_dirs[-1]) - int(thread_dirs[0])) > 1000:
+                    thread_list.append(pid)
+            except OSError:    # proc has already terminated
+                continue
         return thread_list
 
 
     def cwd_check(self):
         '''
-        Returns a list of pids whose cwd
-        is either /tmp, /dev/shm, or /var/tmp
+        Returns a list of PIDs whose cwd contains
+        either /tmp, /dev/shm, or /var/tmp
         '''
 
         cwd_list = []
         for pid in self.pids:
-            cwd_str = os.readlink('/proc/{}/cwd'.format(pid))
-            if re.match('^/tmp.*|^/dev/shm.*|^/var/tmp.*', cwd_str):
-                cwd_list.append(pid)
+            try:
+                cwd_str = os.readlink('/proc/{}/cwd'.format(pid))
+                if re.match('^/tmp.*|^/dev/shm.*|^/var/tmp.*', cwd_str):
+                    cwd_list.append(pid)
+            except OSError:    # proc has already terminated
+                continue
         return cwd_list
 
 
@@ -159,11 +166,12 @@ class ProcFinder():
                     for j in lines:
                         if re.match('LD_PRELOAD=.*', j):
                             preload_list.append(pid)
-            except IOError:    # proc has already terminated
+            except OSError:    # proc has already terminated
                 continue
         return preload_list
 
 
+# TODO: Cannot read exe link on some processes
 def pid_binary(pids):
     '''
     Accepts a list of pids and returns
@@ -175,7 +183,9 @@ def pid_binary(pids):
         try:
             binary = os.readlink("/proc/{}/exe".format(pid))
             binary_list.append(binary)
-        except FileNotFoundError:   # Cannot open /proc/PID/exe
+        except FileNotFoundError:    # Cannot read exe link
+            continue
+        except OSError:    # proc has already terminated
             continue
     return binary_list
 
@@ -195,26 +205,34 @@ def banner():
 if __name__ == '__main__':
     myclass = ProcFinder()
     banner()
+
     print(GREEN + "Pids Running..." + WHITE)
     print(myclass)
+
     print(GREEN + "Deleted Binaries Running..." + WHITE)
     print(myclass.deleted_bin())
     print(pid_binary(myclass.deleted_bin()))
+
     print(GREEN + "Strange Path Binaries..." + WHITE)
     print(myclass.path())
     print(pid_binary(myclass.path()))
+
     print(GREEN + "Promiscuous Binaries..." + WHITE)
     print(myclass.promiscuous())
     print(pid_binary(myclass.promiscuous()))
+
     print(GREEN + "ps check..." + WHITE)
     print(myclass.ps_check())
     print(pid_binary(myclass.ps_check()))
+
     print(GREEN + "Thread check..." + WHITE)
     print(myclass.thread_check())
     print(pid_binary(myclass.thread_check()))
+
     print(GREEN + "cwd check..." + WHITE)
     print(myclass.cwd_check())
     print(pid_binary(myclass.cwd_check()))
+
     print(GREEN + "LD_PRELOAD check..." + WHITE)
     print(myclass.preload_check())
     print(pid_binary(myclass.preload_check()))
