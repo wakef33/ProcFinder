@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 '''
 VERSION = '0.2.6'
 ProcFinder checks various locations for
@@ -19,6 +19,9 @@ class ProcFinder():
 
 
     def __init__(self):
+        if os.name != "posix" or os.path.isdir("/proc") == False:
+            print(RED + "[-] " + WHITE + "ProcFinder.py is intended to only be ran on a *nix OS with a procfs")
+            exit()
         self.pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
 
 
