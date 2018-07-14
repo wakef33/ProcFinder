@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''
-ProcFinder.py parses the procfs in Linux
+ProcFinder parses the procfs in Linux
 distributions searching for signs of malware
 '''
 
@@ -13,7 +13,7 @@ GREEN = '\033[1;32m'
 BLUE  = '\033[0;94m'
 WHITE = '\033[0m'
 
-__version__ = '0.2.7'
+__version__ = 'ProcFinder 0.2.7'
 
 
 class ProcFinder():
@@ -21,8 +21,8 @@ class ProcFinder():
 
     def __init__(self):
         if os.name != "posix" or os.path.isdir("/proc") == False:
-            print(RED + "[-] " + WHITE + "ProcFinder.py is intended to only be ran on a *nix OS with a procfs")
-            exit()
+            print(RED + "[-] " + WHITE + "ProcFinder is intended to only be ran on a *nix OS with a procfs")
+            raise SystemExit()
         self.pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
 
 
@@ -191,18 +191,25 @@ def pid_binary(pids):
 
 
 def banner():
-    print("\n" + BLUE)
-    print("============================================================")
-    print("  ####  ####  ##### ####    #### ### #   # ###  #### ####   ")
-    print("  #   # #   # #   # #       #     #  ##  # #  # #    #   #  ")
-    print("  ####  ####  #   # #       ####  #  # # # #  # #### ####   ")
-    print("  #     #   # #   # #       #     #  #  ## #  # #    #   #  ")
-    print("  #     #   # ##### ####    #    ### #   # ###  #### #   #  ")
-    print("============================================================")
-    print("\n" + WHITE)
+    banner = "\n".join([
+        "  _____                ______ _           _",
+        " |  __ \              |  ____(_)         | |",
+        " | |__) | __ ___   ___| |__   _ _ __   __| | ___ _ __",
+        " |  ___/ '__/ _ \ / __|  __| | | '_ \ / _` |/ _ \ '__|",
+        " | |   | | | (_) | (__| |    | | | | | (_| |  __/ |",
+        " |_|   |_|  \___/ \___|_|    |_|_| |_|\__,_|\___|_|",
+    ])
+
+    print("\n" + BLUE + banner)
+    print("\n                 {}".format(__version__))
+    print("               Author: Jacob Cochran \n")
 
 
-if __name__ == '__main__':
+def main():
+    if os.geteuid() != 0:
+        print(RED + "[-] " + WHITE + "ProcFinder must be run as root")
+        raise SystemExit()
+
     myclass = ProcFinder()
     banner()
 
@@ -237,3 +244,6 @@ if __name__ == '__main__':
     print(myclass.preload_check())
     print(pid_binary(myclass.preload_check()))
 
+
+if __name__ == '__main__':
+    main()
