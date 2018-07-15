@@ -13,7 +13,7 @@ class TestPreload(unittest.TestCase):
         os.environ["LD_PRELOAD"] = "/lib/x86_64-linux-gnu/libcrypt-2.23.so"
         cmd = subprocess.Popen(['sleep', '600'])
         p = ProcFinder()
-        self.assertIn(str(cmd.pid), p.preload_check())
+        self.assertIn(cmd.pid, p.preload_check())
         cmd.kill()
 
 if __name__ == '__main__':

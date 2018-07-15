@@ -12,7 +12,7 @@ class TestCWD(unittest.TestCase):
         cmd_tmp = subprocess.Popen(['sleep', '600'], cwd='/tmp')
         cmd_shm = subprocess.Popen(['sleep', '600'], cwd='/dev/shm')
         cmd_var = subprocess.Popen(['sleep', '600'], cwd='/var/tmp')
-        cwd_list = [str(cmd_tmp.pid), str(cmd_shm.pid), str(cmd_var.pid)]
+        cwd_list = [cmd_tmp.pid, cmd_shm.pid, cmd_var.pid]
         p = ProcFinder()
         for i in cwd_list:
             self.assertIn(i, p.cwd_check())

@@ -35,11 +35,11 @@ class ProcFinder():
         if os.name != "posix" or os.path.isdir("/proc") == False:
             mycolors.warning("ProcFinder is intended to only be ran on a *nix OS with a procfs")
             raise SystemExit()
-        self.pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
+        self.pids = [int(pid) for pid in os.listdir('/proc') if pid.isdigit()]
 
 
-    def __repr__(self):
-        return "%s" % (self.pids)
+    def __str__(self):
+        return "{}".format(self.pids)
 
 
     def deleted_check(self):
@@ -121,7 +121,8 @@ class ProcFinder():
         output = ps.communicate(timeout=15)[0]
         outputList = output.decode().split('\n')[:-2]
         outputStriped = [x.strip(' ') for x in outputList]
-        return list(set(outputStriped).symmetric_difference(self.pids))
+        outputInt = [int(x) for x in outputList]
+        return list(set(outputInt).symmetric_difference(self.pids))
 
 
     def thread_check(self):

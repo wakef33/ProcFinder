@@ -14,7 +14,7 @@ class TestDeleted(unittest.TestCase):
         cmd_run = subprocess.Popen(['/tmp/deleted', '600'])
         cmd_del = subprocess.Popen(['rm', '-f', '/tmp/deleted'])
         p = ProcFinder()
-        self.assertIn(str(cmd_run.pid), p.deleted_check())
+        self.assertIn(cmd_run.pid, p.deleted_check())
         cmd_run.kill()
 
 if __name__ == '__main__':

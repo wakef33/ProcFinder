@@ -13,7 +13,7 @@ class TestPath(unittest.TestCase):
         os.environ["PATH"] = os.environ["PATH"] + ":."
         cmd = subprocess.Popen(['sleep', '600'])
         p = ProcFinder()
-        self.assertIn(str(cmd.pid), p.path_check())
+        self.assertIn(cmd.pid, p.path_check())
         cmd.kill()
 
 if __name__ == '__main__':
