@@ -13,27 +13,22 @@ __version__ = 'ProcFinder 0.2.7'
 
 class Colors():
 
-
     RED   = '\033[1;91m'
     GREEN = '\033[1;32m'
     BLUE  = '\033[0;94m'
     WHITE = '\033[0m'
 
-
     def warning(self, text):
         print(self.RED + '[-] ' + self.WHITE + text)
 
-
     def note(self, text):
         print(self.GREEN + '[+] ' + self.WHITE + text)
-
 
     def banner(self, text):
         print(self.BLUE + text + self.WHITE)
 
 
 class ProcFinder():
-
 
     def __init__(self):
         mycolors = Colors()
@@ -234,41 +229,70 @@ def main():
 
     mycolors.note("PIDs Running")
     print(myclass)
+    print()
 
     mycolors.note("Deleted Binaries Check")
-    mycolors.warning("Found Deleted Running Binaries")
-    print(myclass.deleted_bin())
-    print(pid_binary(myclass.deleted_bin()))
+    if len(myclass.deleted_bin()) == 0:
+       mycolors.note("No Deleted Binaries Running Found\n")
+    else:
+        mycolors.warning("Found Deleted Binaries Running")
+        print(myclass.deleted_bin())
+        print(pid_binary(myclass.deleted_bin()))
+        print()
 
     mycolors.note("PATH Environment Variables Check")
-    mycolors.warning("Found Suspicious PATH Environment Variables")    
-    print(myclass.path())
-    print(pid_binary(myclass.path()))
+    if len(myclass.path()) == 0:
+        mycolors.note("No Suspicious PATH Environment Variables Found\n")
+    else:
+        mycolors.warning("Found Suspicious PATH Environment Variables")
+        print(myclass.path())
+        print(pid_binary(myclass.path()))
+        print()
 
     mycolors.note("Promiscuous Binaries Check")
-    mycolors.warning("Found Promiscuous Binaries Running")                              
-    print(myclass.promiscuous())
-    print(pid_binary(myclass.promiscuous()))
+    if len(myclass.promiscuous()) == 0:
+        mycolors.note("No Promiscuous Binaries Running Found\n")
+    else:
+        mycolors.warning("Found Promiscuous Binaries Running")
+        print(myclass.promiscuous())
+        print(pid_binary(myclass.promiscuous()))
+        print()
 
     mycolors.note("Ps Check")
-    mycolors.warning("Found Suspicious PIDs")                              
-    print(myclass.ps_check())
-    print(pid_binary(myclass.ps_check()))
+    if len(myclass.ps_check()) == 0:
+       mycolors.note("No Suspicious PIDs Found\n")
+    else:
+        mycolors.warning("Found Suspicious PIDs")
+        print(myclass.ps_check())
+        print(pid_binary(myclass.ps_check()))
+        print()
 
     mycolors.note("Thread Check")
-    mycolors.warning("Found Suspicious Threads")                              
-    print(myclass.thread_check())
-    print(pid_binary(myclass.thread_check()))
+    if len(myclass.thread_check()) == 0:
+        mycolors.note("No Suspicious Threads Found\n")
+    else:
+        mycolors.warning("Found Suspicious Threads")
+        print(myclass.thread_check())
+        print(pid_binary(myclass.thread_check()))
+        print()
 
     mycolors.note("CWD Check")
-    mycolors.warning("Found Suspicious CWD")                              
-    print(myclass.cwd_check())
-    print(pid_binary(myclass.cwd_check()))
+    if len(myclass.cwd_check()) == 0:
+        mycolors.note("No Suspicious CWD Found\n")
+    else:
+        mycolors.warning("Found Suspicious CWD")
+        print(myclass.cwd_check())
+        print(pid_binary(myclass.cwd_check()))
+        print()
 
     mycolors.note("LD_PRELOAD Check")
-    mycolors.warning("Found Suspicious LD_PRELOAD")                              
-    print(myclass.preload_check())
-    print(pid_binary(myclass.preload_check()))
+    if len(myclass.preload_check()) == 0:
+        mycolors.note("No Suspicious LD_PRELOAD Found\n")
+    else:
+        mycolors.warning("Found Suspicious LD_PRELOAD")
+        print(myclass.preload_check())
+        print(pid_binary(myclass.preload_check()))
+        print()
     
 
 if __name__ == '__main__':
