@@ -8,20 +8,37 @@ import os
 import re
 import subprocess
 
-RED   = '\033[1;91m'
-GREEN = '\033[1;32m'
-BLUE  = '\033[0;94m'
-WHITE = '\033[0m'
-
 __version__ = 'ProcFinder 0.2.7'
+
+
+class Colors():
+
+
+    RED   = '\033[1;91m'
+    GREEN = '\033[1;32m'
+    BLUE  = '\033[0;94m'
+    WHITE = '\033[0m'
+
+
+    def warning(self, text):
+        print(self.RED + '[-] ' + self.WHITE + text)
+
+
+    def note(self, text):
+        print(self.GREEN + '[+] ' + self.WHITE + text)
+
+
+    def banner(self, text):
+        print(self.BLUE + text + self.WHITE)
 
 
 class ProcFinder():
 
 
     def __init__(self):
+        mycolors = Colors()
         if os.name != "posix" or os.path.isdir("/proc") == False:
-            print(RED + "[-] " + WHITE + "ProcFinder is intended to only be ran on a *nix OS with a procfs")
+            mycolors.warning("ProcFinder is intended to only be ran on a *nix OS with a procfs")
             raise SystemExit()
         self.pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
 
@@ -198,52 +215,61 @@ def banner():
         " |  ___/ '__/ _ \ / __|  __| | | '_ \ / _` |/ _ \ '__|",
         " | |   | | | (_) | (__| |    | | | | | (_| |  __/ |",
         " |_|   |_|  \___/ \___|_|    |_|_| |_|\__,_|\___|_|",
-    ])
+        "\n                 {}",
+        "                 Author: wakef33\n",
+    ]).format(__version__)
 
-    print("\n" + BLUE + banner)
-    print("\n                 {}".format(__version__))
-    print("               Author: Jacob Cochran \n")
-
+    mybanner = Colors()
+    mybanner.banner(banner)
+    
 
 def main():
+    mycolors = Colors()
     if os.geteuid() != 0:
-        print(RED + "[-] " + WHITE + "ProcFinder must be run as root")
+        mycolors.warning("ProcFinder must be run as root")
         raise SystemExit()
 
     myclass = ProcFinder()
     banner()
 
-    print(GREEN + "Pids Running..." + WHITE)
+    mycolors.note("PIDs Running")
     print(myclass)
 
-    print(GREEN + "Deleted Binaries Running..." + WHITE)
+    mycolors.note("Deleted Binaries Check")
+    mycolors.warning("Found Deleted Running Binaries")
     print(myclass.deleted_bin())
     print(pid_binary(myclass.deleted_bin()))
 
-    print(GREEN + "Strange Path Binaries..." + WHITE)
+    mycolors.note("PATH Environment Variables Check")
+    mycolors.warning("Found Suspicious PATH Environment Variables")    
     print(myclass.path())
     print(pid_binary(myclass.path()))
 
-    print(GREEN + "Promiscuous Binaries..." + WHITE)
+    mycolors.note("Promiscuous Binaries Check")
+    mycolors.warning("Found Promiscuous Binaries Running")                              
     print(myclass.promiscuous())
     print(pid_binary(myclass.promiscuous()))
 
-    print(GREEN + "ps check..." + WHITE)
+    mycolors.note("Ps Check")
+    mycolors.warning("Found Suspicious PIDs")                              
     print(myclass.ps_check())
     print(pid_binary(myclass.ps_check()))
 
-    print(GREEN + "Thread check..." + WHITE)
+    mycolors.note("Thread Check")
+    mycolors.warning("Found Suspicious Threads")                              
     print(myclass.thread_check())
     print(pid_binary(myclass.thread_check()))
 
-    print(GREEN + "cwd check..." + WHITE)
+    mycolors.note("CWD Check")
+    mycolors.warning("Found Suspicious CWD")                              
     print(myclass.cwd_check())
     print(pid_binary(myclass.cwd_check()))
 
-    print(GREEN + "LD_PRELOAD check..." + WHITE)
+    mycolors.note("LD_PRELOAD Check")
+    mycolors.warning("Found Suspicious LD_PRELOAD")                              
     print(myclass.preload_check())
     print(pid_binary(myclass.preload_check()))
-
+    
 
 if __name__ == '__main__':
     main()
