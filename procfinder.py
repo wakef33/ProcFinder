@@ -42,7 +42,7 @@ class ProcFinder():
         return "%s" % (self.pids)
 
 
-    def deleted_bin(self):
+    def deleted_check(self):
         '''
         Returns a list of PIDs whose binary has
         been deleted from disk
@@ -59,7 +59,7 @@ class ProcFinder():
         return deleted_binaries
 
 
-    def path(self):
+    def path_check(self):
         '''
         Returns a list of PIDs whose PATH environment
         varibale contains a '.'
@@ -81,7 +81,7 @@ class ProcFinder():
         return path_binaries
 
 
-    def promiscuous(self):
+    def promiscuous_check(self):
         '''
         Returns a list of PIDs who are listening
         on an interface promiscuously
@@ -232,30 +232,30 @@ def main():
     print()
 
     mycolors.note("Deleted Binaries Check")
-    if len(myclass.deleted_bin()) == 0:
+    if len(myclass.deleted_check()) == 0:
        mycolors.note("No Deleted Binaries Running Found\n")
     else:
         mycolors.warning("Found Deleted Binaries Running")
-        print(myclass.deleted_bin())
-        print(pid_binary(myclass.deleted_bin()))
+        print(myclass.deleted_check())
+        print(pid_binary(myclass.deleted_check()))
         print()
 
     mycolors.note("PATH Environment Variables Check")
-    if len(myclass.path()) == 0:
+    if len(myclass.path_check()) == 0:
         mycolors.note("No Suspicious PATH Environment Variables Found\n")
     else:
         mycolors.warning("Found Suspicious PATH Environment Variables")
-        print(myclass.path())
-        print(pid_binary(myclass.path()))
+        print(myclass.path_check())
+        print(pid_binary(myclass.path_check()))
         print()
 
     mycolors.note("Promiscuous Binaries Check")
-    if len(myclass.promiscuous()) == 0:
+    if len(myclass.promiscuous_check()) == 0:
         mycolors.note("No Promiscuous Binaries Running Found\n")
     else:
         mycolors.warning("Found Promiscuous Binaries Running")
-        print(myclass.promiscuous())
-        print(pid_binary(myclass.promiscuous()))
+        print(myclass.promiscuous_check())
+        print(pid_binary(myclass.promiscuous_check()))
         print()
 
     mycolors.note("Ps Check")
