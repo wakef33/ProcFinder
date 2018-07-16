@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 import unittest
-import sys
-sys.path.append('..')
+from sys import path
+path.append('..')
 from procfinder import ProcFinder
 
 class TestProcFinder(unittest.TestCase):
 
-    def test_proc_finder_creation(self):
+    def test_procfinder_creation(self):
         p = ProcFinder()        
         self.assertIsInstance(p, ProcFinder)
 
