@@ -6,7 +6,7 @@ distributions searching for signs of malware.
 
 import os
 import re
-import subprocess
+from subprocess import Popen, PIPE
 
 __version__ = 'ProcFinder 0.3.0'
 
@@ -31,9 +31,9 @@ class Colors():
 class ProcFinder():
 
     def __init__(self):
-        mycolors = Colors()
+        class_colors = Colors()
         if os.name != "posix" or os.path.isdir("/proc") == False:
-            mycolors.warning("ProcFinder is intended to only be ran on a *nix OS with a procfs.")
+            class_colors.warning("ProcFinder is intended to only be ran on a *nix OS with a procfs.")
             raise SystemExit()
         self.pids = [int(pid) for pid in os.listdir('/proc') if pid.isdigit()]
 
@@ -48,15 +48,15 @@ class ProcFinder():
         been deleted from disk.
         '''
 
-        deleted_binaries = []
+        deleted_pids = []
         for pid in self.pids:
             try:
                 link = os.readlink('/proc/{}/exe'.format(pid))
                 if re.match('.*\(deleted\)$', link):
-                    deleted_binaries.append(pid)
+                    deleted_pids.append(pid)
             except OSError:    # proc has already terminated
                 continue
-        return deleted_binaries
+        return deleted_pids
 
 
     def path_check(self):
@@ -65,20 +65,20 @@ class ProcFinder():
         varibale contains a '.'
         '''
 
-        path_binaries = []
+        path_pids = []
         for pid in self.pids:
             try:
                 with open('/proc/{}/environ'.format(pid)) as open_env:
                     # Creates a list of all the environment varliables for the process
                     for i in open_env:
-                        lines = i.split('\x00')
+                        env_list = i.split('\x00')
                     # Loops through each environment varliable looking for '.' in its PATH
-                    for j in lines:
+                    for j in env_list:
                         if re.match('^PATH=.*\..*', j):
-                            path_binaries.append(pid)
+                            path_pids.append(pid)
             except OSError:    # proc has already terminated
                 continue
-        return path_binaries
+        return path_pids
 
 
     def promiscuous_check(self):
@@ -91,27 +91,27 @@ class ProcFinder():
         if os.path.isfile("/proc/net/packet") == False:
             return -1
         inode_list = []
-        promiscuous_list = []
+        promiscuous_pids = []
         with open('/proc/net/packet') as packet:
             packet_read = packet.readlines()
             for i in packet_read[1::]:
                 inode_list.append(i.split()[-1])
         for pid in self.pids:
             try:
-                fd_files = [fd for fd in os.listdir('/proc/{}/fd'.format(pid))]
+                fd_list = [fd for fd in os.listdir('/proc/{}/fd'.format(pid))]
             except OSError:    # proc has already terminated
                 continue
-            for link in fd_files:
+            for link_list in fd_list:
                 try:
-                    fd_link = os.readlink('/proc/{}/fd/{}'.format(pid, link))
+                    fd_link = os.readlink('/proc/{}/fd/{}'.format(pid, link_list))
                     fd_match = list(map(lambda x: re.findall(x, fd_link), inode_list))
                     for i in fd_match:
                         if len(i) > 0:
-                            if pid not in promiscuous_list:
-                                promiscuous_list.append(pid)
+                            if pid not in promiscuous_pids:
+                                promiscuous_pids.append(pid)
                 except OSError:    # proc has already terminated
                     continue
-        return promiscuous_list
+        return promiscuous_pids
 
 
     def ps_check(self):
@@ -120,32 +120,32 @@ class ProcFinder():
         with the on disk ps and the PIDs in /proc.
         '''
 
-        ps = subprocess.Popen(['ps', '-eo', 'pid', '--no-headers'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        ps = Popen(['ps', '-eo', 'pid', '--no-headers'], stdin=PIPE, stdout=PIPE)
         output = ps.communicate(timeout=15)[0]
-        outputList = output.decode().split('\n')[:-2]
-        outputStriped = [x.strip(' ') for x in outputList]
-        outputInt = [int(x) for x in outputList]
-        return list(set(outputInt).symmetric_difference(self.pids))
+        output_list = output.decode().split('\n')[:-2]
+        output_striped = [x.strip(' ') for x in output_list]
+        output_int = [int(x) for x in output_list]
+        return list(set(output_int).symmetric_difference(self.pids))
 
 
     def thread_check(self):
         '''
         Returns a list of PIDs whose process has
         multiple threads and a difference greater
-        than 500 of the smallest and largest thread
+        than 1000 of the smallest and largest thread
         ID. This has a high chance of false positives,
         recommend running multiple times.
         '''
 
-        thread_list = []
+        thread_pids = []
         for pid in self.pids:
             try:
                 thread_dirs = [thread for thread in os.listdir('/proc/{}/task'.format(pid))]
                 if (int(thread_dirs[-1]) - int(thread_dirs[0])) > 1000:
-                    thread_list.append(pid)
+                    thread_pids.append(pid)
             except OSError:    # proc has already terminated
                 continue
-        return thread_list
+        return thread_pids
 
 
     def cwd_check(self):
@@ -154,15 +154,15 @@ class ProcFinder():
         either /tmp, /dev/shm, or /var/tmp.
         '''
 
-        cwd_list = []
+        cwd_pids = []
         for pid in self.pids:
             try:
-                cwd_str = os.readlink('/proc/{}/cwd'.format(pid))
-                if re.match('^/tmp.*|^/dev/shm.*|^/var/tmp.*', cwd_str):
-                    cwd_list.append(pid)
+                open_cwd = os.readlink('/proc/{}/cwd'.format(pid))
+                if re.match('^/tmp.*|^/dev/shm.*|^/var/tmp.*', open_cwd):
+                    cwd_pids.append(pid)
             except OSError:    # proc has already terminated
                 continue
-        return cwd_list
+        return cwd_pids
 
 
     def preload_check(self):
@@ -171,20 +171,20 @@ class ProcFinder():
         is found as an environment variable.
         '''
 
-        preload_list = []
+        preload_pids = []
         for pid in self.pids:
             try:
                 with open('/proc/{}/environ'.format(pid)) as open_env:
                     # Creates a list of all the environment varliables for the process
                     for i in open_env:
-                        lines = i.split('\x00')
+                        env_list = i.split('\x00')
                     # Loops through each environment varliable looking for LD_PRELOAD
-                    for j in lines:
+                    for j in env_list:
                         if re.match('LD_PRELOAD=.*', j):
-                            preload_list.append(pid)
+                            preload_pids.append(pid)
             except OSError:    # proc has already terminated
                 continue
-        return preload_list
+        return preload_pids
 
 
 # TODO: Cannot read exe link on some processes
@@ -194,16 +194,16 @@ def pid_binary(pids):
     a list of the pids binary names.
     '''
 
-    binary_list = []
+    binary_names = []
     for pid in pids:
         try:
             binary = os.readlink("/proc/{}/exe".format(pid))
-            binary_list.append(binary)
+            binary_names.append(binary)
         except FileNotFoundError:    # Cannot read exe link
             continue
         except OSError:    # proc has already terminated
             continue
-    return binary_list
+    return binary_names
 
 
 def banner():
@@ -218,91 +218,91 @@ def banner():
         "                 Author: wakef33\n",
     ]).format(__version__)
 
-    mybanner = Colors()
-    mybanner.banner(banner)
+    banner_colors = Colors()
+    banner_colors.banner(banner)
     
 
 def main():
-    mycolors = Colors()
+    colors = Colors()
     if os.geteuid() != 0:
-        mycolors.warning("ProcFinder must be run as root.")
+        colors.warning("ProcFinder must be run as root.")
         raise SystemExit()
 
-    myclass = ProcFinder()
+    p = ProcFinder()
     banner()
 
-    mycolors.note("PIDs Running")
-    print(myclass)
+    colors.note("PIDs Running")
+    print(p)
     print()
 
-    del_check = myclass.deleted_check()
-    mycolors.note("Deleted Binaries Check")
+    del_check = p.deleted_check()
+    colors.note("Deleted Binaries Check")
     if len(del_check) == 0:
-       mycolors.note("No Deleted Binaries Running Found\n")
+       colors.note("No Deleted Binaries Running Found\n")
     else:
-        mycolors.warning("Found Deleted Binaries Running")
+        colors.warning("Found Deleted Binaries Running")
         print(del_check)
         print(pid_binary(del_check))
         print()
 
-    path_check = myclass.path_check()
-    mycolors.note("PATH Environment Variables Check")
+    path_check = p.path_check()
+    colors.note("PATH Environment Variables Check")
     if len(path_check) == 0:
-        mycolors.note("No Suspicious PATH Environment Variables Found\n")
+        colors.note("No Suspicious PATH Environment Variables Found\n")
     else:
-        mycolors.warning("Found Suspicious PATH Environment Variables")
+        colors.warning("Found Suspicious PATH Environment Variables")
         print(path_check)
         print(pid_binary(path_check))
         print()
 
-    promiscuous_check = myclass.promiscuous_check()
-    mycolors.note("Promiscuous Binaries Check")
-    if myclass.promiscuous_check() == -1:
-        mycolors.warning("Error: /proc/net/packet does not exist\n")
-    elif len(myclass.promiscuous_check()) == 0:
-        mycolors.note("No Promiscuous Binaries Running Found\n")
+    promiscuous_check = p.promiscuous_check()
+    colors.note("Promiscuous Binaries Check")
+    if p.promiscuous_check() == -1:
+        colors.warning("Error: /proc/net/packet does not exist\n")
+    elif len(p.promiscuous_check()) == 0:
+        colors.note("No Promiscuous Binaries Running Found\n")
     else:
-        mycolors.warning("Found Promiscuous Binaries Running")
+        colors.warning("Found Promiscuous Binaries Running")
         print(promiscuous_check)
         print(pid_binary(promiscuous_check))
         print()
 
-    ps_check = myclass.ps_check()
-    mycolors.note("Ps Check")
+    ps_check = p.ps_check()
+    colors.note("Ps Check")
     if len(ps_check) == 0:
-       mycolors.note("No Suspicious PIDs Found\n")
+        colors.note("No Suspicious PIDs Found\n")
     else:
-        mycolors.warning("Found Suspicious PIDs")
+        colors.warning("Found Suspicious PIDs")
         print(ps_check)
         print(pid_binary(ps_check))
         print()
 
-    thread_check = myclass.thread_check()
-    mycolors.note("Thread Check")
+    thread_check = p.thread_check()
+    colors.note("Thread Check")
     if len(thread_check) == 0:
-        mycolors.note("No Suspicious Threads Found\n")
+        colors.note("No Suspicious Threads Found\n")
     else:
-        mycolors.warning("Found Suspicious Threads")
+        colors.warning("Found Suspicious Threads")
         print(thread_check)
         print(pid_binary(thread_check))
         print()
 
-    cwd_check = myclass.cwd_check()
-    mycolors.note("CWD Check")
+    cwd_check = p.cwd_check()
+    colors.note("CWD Check")
     if len(cwd_check) == 0:
-        mycolors.note("No Suspicious CWD Found\n")
+        colors.note("No Suspicious CWD Found\n")
     else:
-        mycolors.warning("Found Suspicious CWD")
+        colors.warning("Found Suspicious CWD")
         print(cwd_check)
         print(pid_binary(cwd_check))
         print()
 
-    preload_check = myclass.preload_check()
-    mycolors.note("LD_PRELOAD Check")
+    preload_check = p.preload_check()
+    colors.note("LD_PRELOAD Check")
     if len(preload_check) == 0:
-        mycolors.note("No Suspicious LD_PRELOAD Found\n")
+        colors.note("No Suspicious LD_PRELOAD Found\n")
     else:
-        mycolors.warning("Found Suspicious LD_PRELOAD")
+        colors.warning("Found Suspicious LD_PRELOAD")
         print(preload_check)
         print(pid_binary(preload_check))
         print()
