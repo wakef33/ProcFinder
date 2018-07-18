@@ -31,15 +31,32 @@ class Colors():
 class ProcFinder():
 
     def __init__(self):
-        class_colors = Colors()
         if os.name != "posix" or os.path.isdir("/proc") == False:
+            class_colors = Colors()
             class_colors.warning("ProcFinder is intended to only be ran on a *nix OS with a procfs.")
             raise SystemExit()
-        self.pids = [int(pid) for pid in os.listdir('/proc') if pid.isdigit()]
+        self._pids = [int(pid) for pid in os.listdir('/proc') if pid.isdigit()]
 
 
     def __str__(self):
         return "{}".format(self.pids)
+
+
+    @property
+    def pids(self):
+        return self._pids
+
+
+    @pids.setter
+    def pids(self, pid_list):
+        if isinstance(pid_list, list):
+            for i in pid_list:
+                if isinstance(i, int):
+                    self._pids = pid_list
+                else:
+                    raise TypeError("PIDs must be in an integer.")
+        else:
+            raise TypeError("PIDs must be in a list format.")
 
 
     def deleted_check(self):
