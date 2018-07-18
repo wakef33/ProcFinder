@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import unittest
-from sys import path
-path.append('..')
+import sys
+sys.path.append('..')
 from procfinder import ProcFinder
 
 class TestProcFinder(unittest.TestCase):

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
 import unittest
-from socket import socket, AF_PACKET, SOCK_RAW
-from os import getpid
-from sys import path
-path.append('..')
+import socket
+import os
+import sys
+sys.path.append('..')
 from procfinder import ProcFinder
 
 class TestPromiscuous(unittest.TestCase):
 
     def test_promiscuous(self):
-        s = socket(AF_PACKET , SOCK_RAW)
+        s = socket.socket(socket.AF_PACKET , socket.SOCK_RAW)
         p = ProcFinder()
-        self.assertIn(getpid(), p.promiscuous_check())
+        self.assertIn(os.getpid(), p.promiscuous_check())
         s.close()
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ distributions searching for signs of malware.
 
 import os
 import re
-from subprocess import Popen, PIPE
+import subprocess
 
 __version__ = 'ProcFinder 0.3.0'
 
@@ -120,7 +120,7 @@ class ProcFinder():
         with the on disk ps and the PIDs in /proc.
         '''
 
-        ps = Popen(['ps', '-eo', 'pid', '--no-headers'], stdin=PIPE, stdout=PIPE)
+        ps = subprocess.Popen(['ps', '-eo', 'pid', '--no-headers'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         output = ps.communicate(timeout=15)[0]
         output_list = output.decode().split('\n')[:-2]
         output_striped = [x.strip(' ') for x in output_list]
