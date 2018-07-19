@@ -240,8 +240,9 @@ def banner():
     banner_colors.banner(banner)
 
 
-def present_test(check, header, pass_test, fail_test):
+'''def present_test(check, header, pass_test, fail_test):
     colors = Colors()
+    p = ProcFinder()
     proc_check = check
     colors.note(header)
     if len(proc_check) == 0:
@@ -251,10 +252,11 @@ def present_test(check, header, pass_test, fail_test):
         print(proc_check)
         if args.quiet == False:
            print(pid_binary(proc_check)) 
-        print()
+        print()'''
 
 
 def main():
+
     colors = Colors()
     if os.geteuid() != 0:
         colors.warning("ProcFinder must be run as root.")
@@ -273,6 +275,18 @@ def main():
     p = ProcFinder()
     banner()
 
+    def present_test(check, header, pass_test, fail_test):
+        proc_check = check
+        colors.note(header)
+        if len(proc_check) == 0:
+            colors.note(pass_test)
+        else:
+            colors.warning(fail_test)
+            print(proc_check)
+            if args.quiet == False:
+                print(pid_binary(proc_check))
+            print()
+
     colors.note("PIDs Running")
     print(p)
     print()
@@ -290,7 +304,9 @@ def main():
             print(pid_binary(del_check))
         print()'''
 
-    path_check = p.path_check()
+    present_test(p.path_check(), "PATH Environment Variables Check", "No Suspicious PATH Environment Variables Found\n", "Found Suspicious PATH Environment Variables")
+
+    '''path_check = p.path_check()
     colors.note("PATH Environment Variables Check")
     if len(path_check) == 0:
         colors.note("No Suspicious PATH Environment Variables Found\n")
@@ -299,9 +315,11 @@ def main():
         print(path_check)
         if args.quiet == False:
             print(pid_binary(path_check))
-        print()
+        print()'''
 
-    promiscuous_check = p.promiscuous_check()
+    present_test(p.promiscuous_check(), "Promiscuous Binaries Check", "No Promiscuous Binaries Running Found\n", "Found Promiscuous Binaries Running")
+
+    '''promiscuous_check = p.promiscuous_check()
     colors.note("Promiscuous Binaries Check")
     if p.promiscuous_check() == -1:
         colors.warning("Error: /proc/net/packet does not exist\n")
@@ -312,9 +330,11 @@ def main():
         print(promiscuous_check)
         if args.quiet == False:
             print(pid_binary(promiscuous_check))
-        print()
+        print()'''
 
-    ps_check = p.ps_check()
+    present_test(p.ps_check(), "Ps Check", "No Suspicious PIDs Found\n", "Found Suspicious PIDs")
+
+    '''ps_check = p.ps_check()
     colors.note("Ps Check")
     if len(ps_check) == 0:
         colors.note("No Suspicious PIDs Found\n")
@@ -323,9 +343,11 @@ def main():
         print(ps_check)
         if args.quiet == False:
             print(pid_binary(ps_check))
-        print()
+        print()'''
 
-    thread_check = p.thread_check()
+    present_test(p.thread_check(), "Thread Check", "No Suspicious Threads Found\n", "Found Suspicious Threads")
+
+    '''thread_check = p.thread_check()
     colors.note("Thread Check")
     if len(thread_check) == 0:
         colors.note("No Suspicious Threads Found\n")
@@ -334,9 +356,11 @@ def main():
         print(thread_check)
         if args.quiet == False:
             print(pid_binary(thread_check))
-        print()
+        print()'''
 
-    cwd_check = p.cwd_check()
+    present_test(p.cwd_check(), "CWD Check", "No Suspicious CWD Found\n", "Found Suspicious CWD")
+
+    '''cwd_check = p.cwd_check()
     colors.note("CWD Check")
     if len(cwd_check) == 0:
         colors.note("No Suspicious CWD Found\n")
@@ -345,9 +369,11 @@ def main():
         print(cwd_check)
         if args.quiet == False:
             print(pid_binary(cwd_check))
-        print()
+        print()'''
 
-    preload_check = p.preload_check()
+    present_test(p.preload_check(), "LD_PRELOAD Check", "No Suspicious LD_PRELOAD Found\n", "Found Suspicious LD_PRELOAD")
+
+    '''preload_check = p.preload_check()
     colors.note("LD_PRELOAD Check")
     if len(preload_check) == 0:
         colors.note("No Suspicious LD_PRELOAD Found\n")
@@ -356,8 +382,8 @@ def main():
         print(preload_check)
         if args.quiet == False:
             print(pid_binary(preload_check))
-        print()
-    
+        print()'''
+
 
 if __name__ == '__main__':
     main()
