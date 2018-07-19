@@ -6,6 +6,7 @@ distributions searching for signs of malware.
 
 import os
 import re
+import argparse
 import subprocess
 
 __version__ = 'ProcFinder 0.3.0'
@@ -237,12 +238,36 @@ def banner():
 
     banner_colors = Colors()
     banner_colors.banner(banner)
-    
+
+
+def present_test(check, header, pass_test, fail_test):
+    colors = Colors()
+    proc_check = check
+    colors.note(header)
+    if len(proc_check) == 0:
+        colors.note(pass_test)
+    else:
+        colors.warning(fail_test)
+        print(proc_check)
+        if args.quiet == False:
+           print(pid_binary(proc_check)) 
+        print()
+
 
 def main():
     colors = Colors()
     if os.geteuid() != 0:
         colors.warning("ProcFinder must be run as root.")
+        raise SystemExit()
+
+    parser = argparse.ArgumentParser(description='ProcFinder attempts to find signs of malware by checking in /proc')
+    parser.add_argument('-p', '--pids', dest='pids', help='Comma seperated list of PIDs to search against', required=False)
+    parser.add_argument('-q', '--quiet', dest='quiet', help='Do not print binary name associated with the PID', required=False, action='store_true')
+    parser.add_argument('-v', '--version', dest='version', help='Prints version number', required=False, action='store_true')
+    args = parser.parse_args()
+
+    if args.version:
+        print(__version__)
         raise SystemExit()
 
     p = ProcFinder()
@@ -252,15 +277,18 @@ def main():
     print(p)
     print()
 
-    del_check = p.deleted_check()
+    present_test(p.deleted_check(), "Deleted Binaries Check", "No Deleted Binaries Running Found\n", "Found Deleted Binaries Running")
+
+    '''del_check = p.deleted_check()
     colors.note("Deleted Binaries Check")
     if len(del_check) == 0:
        colors.note("No Deleted Binaries Running Found\n")
     else:
         colors.warning("Found Deleted Binaries Running")
         print(del_check)
-        print(pid_binary(del_check))
-        print()
+        if args.quiet == False:
+            print(pid_binary(del_check))
+        print()'''
 
     path_check = p.path_check()
     colors.note("PATH Environment Variables Check")
@@ -269,7 +297,8 @@ def main():
     else:
         colors.warning("Found Suspicious PATH Environment Variables")
         print(path_check)
-        print(pid_binary(path_check))
+        if args.quiet == False:
+            print(pid_binary(path_check))
         print()
 
     promiscuous_check = p.promiscuous_check()
@@ -281,7 +310,8 @@ def main():
     else:
         colors.warning("Found Promiscuous Binaries Running")
         print(promiscuous_check)
-        print(pid_binary(promiscuous_check))
+        if args.quiet == False:
+            print(pid_binary(promiscuous_check))
         print()
 
     ps_check = p.ps_check()
@@ -291,7 +321,8 @@ def main():
     else:
         colors.warning("Found Suspicious PIDs")
         print(ps_check)
-        print(pid_binary(ps_check))
+        if args.quiet == False:
+            print(pid_binary(ps_check))
         print()
 
     thread_check = p.thread_check()
@@ -301,7 +332,8 @@ def main():
     else:
         colors.warning("Found Suspicious Threads")
         print(thread_check)
-        print(pid_binary(thread_check))
+        if args.quiet == False:
+            print(pid_binary(thread_check))
         print()
 
     cwd_check = p.cwd_check()
@@ -311,7 +343,8 @@ def main():
     else:
         colors.warning("Found Suspicious CWD")
         print(cwd_check)
-        print(pid_binary(cwd_check))
+        if args.quiet == False:
+            print(pid_binary(cwd_check))
         print()
 
     preload_check = p.preload_check()
@@ -321,7 +354,8 @@ def main():
     else:
         colors.warning("Found Suspicious LD_PRELOAD")
         print(preload_check)
-        print(pid_binary(preload_check))
+        if args.quiet == False:
+            print(pid_binary(preload_check))
         print()
     
 
