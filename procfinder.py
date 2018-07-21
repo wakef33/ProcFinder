@@ -9,7 +9,7 @@ import re
 import argparse
 import subprocess
 
-__version__ = 'ProcFinder 0.3.0'
+__version__ = 'ProcFinder 0.4.0'
 
 
 class Colors():
@@ -32,7 +32,7 @@ class Colors():
 class ProcFinder():
 
     def __init__(self):
-        if os.name != "posix" or os.path.isdir("/proc") == False:
+        if os.name != 'posix' or os.path.isdir('/proc') == False:
             class_colors = Colors()
             class_colors.warning("ProcFinder is intended to only be ran on a *nix OS with a procfs.")
             raise SystemExit()
@@ -90,10 +90,10 @@ class ProcFinder():
                     # Creates a list of all the environment varliables for the process
                     for i in open_env:
                         env_list = i.split('\x00')
-                    # Loops through each environment varliable looking for '.' in its PATH
-                    for j in env_list:
-                        if re.match('^PATH=.*\..*', j):
-                            path_pids.append(pid)
+                        # Loops through each environment varliable looking for '.' in its PATH
+                        for j in env_list:
+                            if re.match('^PATH=.*\..*', j):
+                                path_pids.append(pid)
             except OSError:    # proc has already terminated
                 continue
         return path_pids
@@ -106,7 +106,7 @@ class ProcFinder():
         -1 if /proc/net/packet does not exist.
         '''
 
-        if os.path.isfile("/proc/net/packet") == False:
+        if os.path.isfile('/proc/net/packet') == False:
             return -1
         inode_list = []
         promiscuous_pids = []
@@ -139,7 +139,7 @@ class ProcFinder():
         '''
 
         ps = subprocess.Popen(['ps', '-eo', 'pid', '--no-headers'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        output = ps.communicate(timeout=15)[0]
+        output = ps.communicate(timeout=5)[0]
         output_list = output.decode().split('\n')[:-2]
         output_striped = [x.strip(' ') for x in output_list]
         output_int = [int(x) for x in output_list]
@@ -196,10 +196,10 @@ class ProcFinder():
                     # Creates a list of all the environment varliables for the process
                     for i in open_env:
                         env_list = i.split('\x00')
-                    # Loops through each environment varliable looking for LD_PRELOAD
-                    for j in env_list:
-                        if re.match('LD_PRELOAD=.*', j):
-                            preload_pids.append(pid)
+                        # Loops through each environment varliable looking for LD_PRELOAD
+                        for j in env_list:
+                            if re.match('LD_PRELOAD=.*', j):
+                                preload_pids.append(pid)
             except OSError:    # proc has already terminated
                 continue
         return preload_pids
@@ -215,17 +215,18 @@ def pid_binary(pids):
     binary_names = []
     for pid in pids:
         try:
-            binary = os.readlink("/proc/{}/exe".format(pid))
+            binary = os.readlink('/proc/{}/exe'.format(pid))
             binary_names.append(binary)
         except FileNotFoundError:    # Cannot read exe link
-            continue
+            with open('/proc/{}/stat'.format(pid)) as open_stat:
+                binary_names.append(open_stat.readline().split()[1])
         except OSError:    # proc has already terminated
             continue
     return binary_names
 
 
 def banner():
-    banner = "\n".join([
+    banner = '\n'.join([
         "  _____                ______ _           _",
         " |  __ \              |  ____(_)         | |",
         " | |__) | __ ___   ___| |__   _ _ __   __| | ___ _ __",
@@ -240,21 +241,6 @@ def banner():
     banner_colors.banner(banner)
 
 
-'''def present_test(check, header, pass_test, fail_test):
-    colors = Colors()
-    p = ProcFinder()
-    proc_check = check
-    colors.note(header)
-    if len(proc_check) == 0:
-        colors.note(pass_test)
-    else:
-        colors.warning(fail_test)
-        print(proc_check)
-        if args.quiet == False:
-           print(pid_binary(proc_check)) 
-        print()'''
-
-
 def main():
 
     colors = Colors()
@@ -262,127 +248,49 @@ def main():
         colors.warning("ProcFinder must be run as root.")
         raise SystemExit()
 
+
     parser = argparse.ArgumentParser(description='ProcFinder attempts to find signs of malware by checking in /proc')
     parser.add_argument('-p', '--pids', dest='pids', help='Comma seperated list of PIDs to search against', required=False)
     parser.add_argument('-q', '--quiet', dest='quiet', help='Do not print binary name associated with the PID', required=False, action='store_true')
     parser.add_argument('-v', '--version', dest='version', help='Prints version number', required=False, action='store_true')
     args = parser.parse_args()
 
+
     if args.version:
         print(__version__)
         raise SystemExit()
 
+
     p = ProcFinder()
     banner()
 
+
     def present_test(check, header, pass_test, fail_test):
-        proc_check = check
         colors.note(header)
-        if len(proc_check) == 0:
+        if check == -1:
+            colors.warning("Error: /proc/net/packet does not exist\n")
+        elif len(check) == 0:
             colors.note(pass_test)
         else:
             colors.warning(fail_test)
-            print(proc_check)
+            print(check)
             if args.quiet == False:
-                print(pid_binary(proc_check))
+                print(pid_binary(check))
             print()
+
 
     colors.note("PIDs Running")
     print(p)
     print()
 
+
     present_test(p.deleted_check(), "Deleted Binaries Check", "No Deleted Binaries Running Found\n", "Found Deleted Binaries Running")
-
-    '''del_check = p.deleted_check()
-    colors.note("Deleted Binaries Check")
-    if len(del_check) == 0:
-       colors.note("No Deleted Binaries Running Found\n")
-    else:
-        colors.warning("Found Deleted Binaries Running")
-        print(del_check)
-        if args.quiet == False:
-            print(pid_binary(del_check))
-        print()'''
-
     present_test(p.path_check(), "PATH Environment Variables Check", "No Suspicious PATH Environment Variables Found\n", "Found Suspicious PATH Environment Variables")
-
-    '''path_check = p.path_check()
-    colors.note("PATH Environment Variables Check")
-    if len(path_check) == 0:
-        colors.note("No Suspicious PATH Environment Variables Found\n")
-    else:
-        colors.warning("Found Suspicious PATH Environment Variables")
-        print(path_check)
-        if args.quiet == False:
-            print(pid_binary(path_check))
-        print()'''
-
     present_test(p.promiscuous_check(), "Promiscuous Binaries Check", "No Promiscuous Binaries Running Found\n", "Found Promiscuous Binaries Running")
-
-    '''promiscuous_check = p.promiscuous_check()
-    colors.note("Promiscuous Binaries Check")
-    if p.promiscuous_check() == -1:
-        colors.warning("Error: /proc/net/packet does not exist\n")
-    elif len(p.promiscuous_check()) == 0:
-        colors.note("No Promiscuous Binaries Running Found\n")
-    else:
-        colors.warning("Found Promiscuous Binaries Running")
-        print(promiscuous_check)
-        if args.quiet == False:
-            print(pid_binary(promiscuous_check))
-        print()'''
-
     present_test(p.ps_check(), "Ps Check", "No Suspicious PIDs Found\n", "Found Suspicious PIDs")
-
-    '''ps_check = p.ps_check()
-    colors.note("Ps Check")
-    if len(ps_check) == 0:
-        colors.note("No Suspicious PIDs Found\n")
-    else:
-        colors.warning("Found Suspicious PIDs")
-        print(ps_check)
-        if args.quiet == False:
-            print(pid_binary(ps_check))
-        print()'''
-
     present_test(p.thread_check(), "Thread Check", "No Suspicious Threads Found\n", "Found Suspicious Threads")
-
-    '''thread_check = p.thread_check()
-    colors.note("Thread Check")
-    if len(thread_check) == 0:
-        colors.note("No Suspicious Threads Found\n")
-    else:
-        colors.warning("Found Suspicious Threads")
-        print(thread_check)
-        if args.quiet == False:
-            print(pid_binary(thread_check))
-        print()'''
-
     present_test(p.cwd_check(), "CWD Check", "No Suspicious CWD Found\n", "Found Suspicious CWD")
-
-    '''cwd_check = p.cwd_check()
-    colors.note("CWD Check")
-    if len(cwd_check) == 0:
-        colors.note("No Suspicious CWD Found\n")
-    else:
-        colors.warning("Found Suspicious CWD")
-        print(cwd_check)
-        if args.quiet == False:
-            print(pid_binary(cwd_check))
-        print()'''
-
     present_test(p.preload_check(), "LD_PRELOAD Check", "No Suspicious LD_PRELOAD Found\n", "Found Suspicious LD_PRELOAD")
-
-    '''preload_check = p.preload_check()
-    colors.note("LD_PRELOAD Check")
-    if len(preload_check) == 0:
-        colors.note("No Suspicious LD_PRELOAD Found\n")
-    else:
-        colors.warning("Found Suspicious LD_PRELOAD")
-        print(preload_check)
-        if args.quiet == False:
-            print(pid_binary(preload_check))
-        print()'''
 
 
 if __name__ == '__main__':
