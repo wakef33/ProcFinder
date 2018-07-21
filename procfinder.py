@@ -60,17 +60,14 @@ class ProcFinder():
             raise TypeError("PIDs must be in a list format.")
 
 
-    def deleted_check(self, user_pids=None):
+    def deleted_check(self):
         '''
         Returns a list of PIDs whose binary has
         been deleted from disk.
         '''
 
-        pids_list = self.pids
-        if user_pids != None:
-            pids_list = user_pids
         deleted_pids = []
-        for pid in pids_list:
+        for pid in self.pids:
             try:
                 link = os.readlink('/proc/{}/exe'.format(pid))
                 if re.match('.*\(deleted\)$', link):
@@ -80,17 +77,14 @@ class ProcFinder():
         return deleted_pids
 
 
-    def path_check(self, user_pids=None):
+    def path_check(self):
         '''
         Returns a list of PIDs whose PATH environment
         varibale contains a '.'
         '''
 
-        pids_list = self.pids
-        if user_pids != None:
-            pids_list = user_pids
         path_pids = []
-        for pid in pids_list:
+        for pid in self.pids:
             try:
                 with open('/proc/{}/environ'.format(pid)) as open_env:
                     # Creates a list of all the environment varliables for the process
@@ -105,16 +99,13 @@ class ProcFinder():
         return path_pids
 
 
-    def promiscuous_check(self, user_pids=None):
+    def promiscuous_check(self):
         '''
         Returns a list of PIDs who are listening
         on an interface promiscuously. Returns
         -1 if /proc/net/packet does not exist.
         '''
 
-        pids_list = self.pids
-        if user_pids != None:
-            pids_list = user_pids
         if os.path.isfile('/proc/net/packet') == False:
             return -1
         inode_list = []
@@ -123,7 +114,7 @@ class ProcFinder():
             packet_read = packet.readlines()
             for i in packet_read[1::]:
                 inode_list.append(i.split()[-1])
-        for pid in pids_list:
+        for pid in self.pids:
             try:
                 fd_list = [fd for fd in os.listdir('/proc/{}/fd'.format(pid))]
             except OSError:    # proc has already terminated
@@ -155,7 +146,7 @@ class ProcFinder():
         return list(set(output_int).symmetric_difference(self.pids))
 
 
-    def thread_check(self, user_pids=None):
+    def thread_check(self):
         '''
         Returns a list of PIDs whose process has
         multiple threads and a difference greater
@@ -164,11 +155,8 @@ class ProcFinder():
         recommend running multiple times.
         '''
 
-        pids_list = self.pids
-        if user_pids != None:
-            pids_list = user_pids
         thread_pids = []
-        for pid in pids_list:
+        for pid in self.pids:
             try:
                 thread_dirs = [thread for thread in os.listdir('/proc/{}/task'.format(pid))]
                 if (int(thread_dirs[-1]) - int(thread_dirs[0])) > 1000:
@@ -178,17 +166,14 @@ class ProcFinder():
         return thread_pids
 
 
-    def cwd_check(self, user_pids=None):
+    def cwd_check(self):
         '''
         Returns a list of PIDs whose cwd contains
         either /tmp, /dev/shm, or /var/tmp.
         '''
 
-        pids_list = self.pids
-        if user_pids != None:
-            pids_list = user_pids
         cwd_pids = []
-        for pid in pids_list:
+        for pid in self.pids:
             try:
                 open_cwd = os.readlink('/proc/{}/cwd'.format(pid))
                 if re.match('^/tmp.*|^/dev/shm.*|^/var/tmp.*', open_cwd):
@@ -198,17 +183,14 @@ class ProcFinder():
         return cwd_pids
 
 
-    def preload_check(self, user_pids=None):
+    def preload_check(self):
         '''
         Returns a list of pids where LD_PRELOAD
         is found as an environment variable.
         '''
 
-        pids_list = self.pids
-        if user_pids != None:
-            pids_list = user_pids
         preload_pids = []
-        for pid in pids_list:
+        for pid in self.pids:
             try:
                 with open('/proc/{}/environ'.format(pid)) as open_env:
                     # Creates a list of all the environment varliables for the process
@@ -266,7 +248,7 @@ def main():
         raise SystemExit()
 
     parser = argparse.ArgumentParser(description='ProcFinder attempts to find signs of malware by checking in /proc')
-    parser.add_argument('-p', '--pids', dest='pids', help='Space seperated list of PIDs to search against', required=False, nargs='*', type=int)
+    parser.add_argument('-p', '--pids', dest='pids', help='Comma seperated list of PIDs to search against', required=False, nargs='*', type=int)
     parser.add_argument('-q', '--quiet', dest='quiet', help='Do not print binary name associated with the PID', required=False, action='store_true')
     parser.add_argument('-v', '--version', dest='version', help='Prints version number', required=False, action='store_true')
     args = parser.parse_args()
@@ -277,6 +259,10 @@ def main():
 
     p = ProcFinder()
     banner()
+
+    # TODO: Fix ps_check with --pids
+    if args.pids != None:
+        p.pids = args.pids
 
     def present_test(check, header, pass_test, fail_test):
         colors.note(header)
@@ -295,13 +281,13 @@ def main():
     print(p)
     print()
 
-    present_test(p.deleted_check(args.pids), "Deleted Binaries Check", "No Deleted Binaries Running Found\n", "Found Deleted Binaries Running")
-    present_test(p.path_check(args.pids), "PATH Environment Variables Check", "No Suspicious PATH Environment Variables Found\n", "Found Suspicious PATH Environment Variables")
-    present_test(p.promiscuous_check(args.pids), "Promiscuous Binaries Check", "No Promiscuous Binaries Running Found\n", "Found Promiscuous Binaries Running")
+    present_test(p.deleted_check(), "Deleted Binaries Check", "No Deleted Binaries Running Found\n", "Found Deleted Binaries Running")
+    present_test(p.path_check(), "PATH Environment Variables Check", "No Suspicious PATH Environment Variables Found\n", "Found Suspicious PATH Environment Variables")
+    present_test(p.promiscuous_check(), "Promiscuous Binaries Check", "No Promiscuous Binaries Running Found\n", "Found Promiscuous Binaries Running")
     present_test(p.ps_check(), "Ps Check", "No Suspicious PIDs Found\n", "Found Suspicious PIDs")
-    present_test(p.thread_check(args.pids), "Thread Check", "No Suspicious Threads Found\n", "Found Suspicious Threads")
-    present_test(p.cwd_check(args.pids), "CWD Check", "No Suspicious CWD Found\n", "Found Suspicious CWD")
-    present_test(p.preload_check(args.pids), "LD_PRELOAD Check", "No Suspicious LD_PRELOAD Found\n", "Found Suspicious LD_PRELOAD")
+    present_test(p.thread_check(), "Thread Check", "No Suspicious Threads Found\n", "Found Suspicious Threads")
+    present_test(p.cwd_check(), "CWD Check", "No Suspicious CWD Found\n", "Found Suspicious CWD")
+    present_test(p.preload_check(), "LD_PRELOAD Check", "No Suspicious LD_PRELOAD Found\n", "Found Suspicious LD_PRELOAD")
 
 
 if __name__ == '__main__':
