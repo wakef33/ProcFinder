@@ -194,6 +194,7 @@ class ProcFinder():
             try:
                 with open('/proc/{}/environ'.format(pid)) as open_env:
                     # Creates a list of all the environment varliables for the process
+                    # TODO: replace for loop with env = open_env.read().split('\x00')
                     for i in open_env:
                         env_list = i.split('\x00')
                         # Loops through each environment varliable looking for LD_PRELOAD
@@ -203,6 +204,32 @@ class ProcFinder():
             except OSError:    # proc has already terminated
                 continue
         return preload_pids
+
+
+def ko_check():
+    '''
+    Returns a list of running kernel objects
+    that are not found in /lib/modules.
+    '''
+
+    # TODO: Needs cleaning up
+    ko_list = []
+    # Gets current kernel version
+    with open('/proc/version') as open_ver:
+        version = open_ver.read().split()[2]
+    # Creates a list of all .ko files on disk for the running kernel version
+    ko_file_list = []
+    for root, dirs, files in os.walk('/lib/modules/{}/kernel'.format(version)):
+        ko_file_list.extend(files)
+    # Checks to see if all running kernel objects are found in ko_file_list
+    with open('/proc/modules') as open_modules:
+        for i in open_modules:
+            if (i.split()[0] + ".ko") not in ko_file_list:
+                # Some .ko files replace '-' with '_' when checked in /proc/modules
+                # Have to replace to check and replace x86-64 with x86_64
+                if (i.split()[0].replace('_', '-').replace('x86-64', 'x86_64') + ".ko") not in ko_file_list:
+                    ko_list.append(i)
+    return ko_list
 
 
 def pid_binary(pids):
@@ -273,9 +300,11 @@ def main():
         else:
             colors.warning(fail_test)
             print(check)
-            if args.quiet == False:
+            if fail_test == "Found Suspicious Kernel Objects":
+                print()
+            elif args.quiet == False:
                 print(pid_binary(check))
-            print()
+                print()
 
     colors.note("PIDs Running")
     print(p)
@@ -288,7 +317,7 @@ def main():
     present_test(p.thread_check(), "Thread Check", "No Suspicious Threads Found\n", "Found Suspicious Threads")
     present_test(p.cwd_check(), "CWD Check", "No Suspicious CWD Found\n", "Found Suspicious CWD")
     present_test(p.preload_check(), "LD_PRELOAD Check", "No Suspicious LD_PRELOAD Found\n", "Found Suspicious LD_PRELOAD")
-
+    present_test(ko_check(), "Kernel Objects Check", "No Suspicious Kernel Objects Found", "Found Suspicious Kernel Objects")
 
 if __name__ == '__main__':
     main()
